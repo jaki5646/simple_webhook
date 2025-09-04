@@ -1,53 +1,58 @@
-import axios from "axios";
+import axios from 'axios';
+import fs from 'fs';
 
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const LAST_ID_FILE = './lastPostId.txt';
 
-let lastPostId = null;
+function getLastPostedId() {
+  try {
+    return fs.readFileSync(LAST_ID_FILE, 'utf-8').trim();
+  } catch {
+    return null;
+  }
+}
+
+function saveLastPostedId(id) {
+  fs.writeFileSync(LAST_ID_FILE, id);
+}
+
 async function getLatestPost() {
   try {
-    const response = await axios.get(
-      `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`,
-      {
-        params: {
-          access_token: FB_ACCESS_TOKEN,
-          fields: "message,permalink_url,created_time,id",
-          limit: 1,
-        },
+    const res = await axios.get(`https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`, {
+      params: {
+        access_token: FB_ACCESS_TOKEN,
+        fields: 'message,permalink_url,created_time,id',
+        limit: 1
       }
-    );
+    });
 
-    const posts = response.data.data;
+    const posts = res.data.data;
     return posts.length > 0 ? posts[0] : null;
-  } catch (err) {
-    console.error(
-      "Error fetching Facebook post:",
-      err.response?.data || err.message
-    );
+  } catch {
     return null;
   }
 }
 
 async function sendToDiscord(post) {
-  const content = `${post.message || "[No message]"}\n\n[*See post*](<${post.permalink_url}>)`;
+  const content = `**New Facebook Post:**\n${post.message || "[No message]"}\n${post.permalink_url}`;
   try {
     await axios.post(DISCORD_WEBHOOK_URL, { content });
-  } catch (err) {
-    console.error(
-      "❌ Error sending to Discord:",
-      err.response?.data || err.message
-    );
+  } catch {
+    // Fail silently
   }
 }
 
 async function checkForNewPost() {
-  const latestPost = await getLatestPost();
-  if (latestPost && latestPost.id !== lastPostId) {
-    await sendToDiscord(latestPost);
-    lastPostId = latestPost.id;
-  }
+  const latest = await getLatestPost();
+  if (!latest) return;
+
+  const lastId = getLastPostedId();
+  if (latest.id === lastId) return;
+
+  await sendToDiscord(latest);
+  saveLastPostedId(latest.id);
 }
 
-// Check every 5 minutes
 checkForNewPost();
