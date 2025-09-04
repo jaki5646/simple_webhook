@@ -36,7 +36,7 @@ async function getLatestPost() {
 }
 
 async function sendToDiscord(post) {
-  const content = `**New Facebook Post:**\n${post.message || "[No message]"}\n${post.permalink_url}`;
+  const content = `${post.message}\n[*See post](<${post.permalink_url}>)`;
   try {
     await axios.post(DISCORD_WEBHOOK_URL, { content });
   } catch {
