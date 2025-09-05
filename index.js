@@ -48,7 +48,7 @@ async function getLatestPost() {
 
 async function sendToDiscord(post) {
   const payload = {
-    content: post.message || '' + `\n[*See post*](${post.permalink_url})`,
+    content: `${post.message}\n[*See post*](${post.permalink_url})`,
     embeds: []
   };
 
@@ -59,8 +59,6 @@ async function sendToDiscord(post) {
       },
       url: post.permalink_url,
     });
-  } else {
-    payload.content += `Post Error`;
   }
 
   try {
