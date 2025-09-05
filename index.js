@@ -46,7 +46,7 @@ async function sendToDiscord(post) {
     timestamp: post.created_time
   })
   try {
-    await axios.post(DISCORD_WEBHOOK_URL, { content });
+    await axios.post(DISCORD_WEBHOOK_URL, { content, embeds });
   } catch {
     // Fail silently
   }
