@@ -23,24 +23,53 @@ async function getLatestPost() {
     const res = await axios.get(`https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`, {
       params: {
         access_token: FB_ACCESS_TOKEN,
-        fields: 'message,permalink_url,created_time,id',
+        fields: 'message,permalink_url,created_time,id,attachments{media}',
         limit: 1
       }
     });
 
     const posts = res.data.data;
-    return posts.length > 0 ? posts[0] : null;
-  } catch {
+    if (posts.length === 0) return null;
+
+    const post = posts[0];
+    const imageUrl = post.attachments?.data?.[0]?.media?.image?.src || null;
+
+    return {
+      id: post.id,
+      message: post.message || '',
+      permalink_url: post.permalink_url,
+      image_url: imageUrl
+    };
+  } catch (err) {
+    console.error('Error fetching latest post:', err.response?.data || err.message);
     return null;
   }
 }
 
 async function sendToDiscord(post) {
-  const content = `${post.message}\n[*See post](<${post.permalink_url}>)`;
+  const payload = {
+    content: post.message || '',
+    embeds: []
+  };
+
+  if (post.image_url) {
+    payload.embeds.push({
+      image: {
+        url: post.image_url
+      },
+      url: post.permalink_url,
+      footer: {
+        text: 'Click to view the full post'
+      }
+    });
+  } else {
+    payload.content += `\n[*See post*](${post.permalink_url})`;
+  }
+
   try {
-    await axios.post(DISCORD_WEBHOOK_URL, { content });
-  } catch {
-    // Fail silently
+    await axios.post(DISCORD_WEBHOOK_URL, payload);
+  } catch (err) {
+    console.error('Error sending to Discord:', err.response?.data || err.message);
   }
 }
 
