@@ -4,18 +4,21 @@ import fs from 'fs';
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const LAST_ID_FILE = './lastPostId.txt';
+const CACHE_FILE = ".cache/fb.json";
 
 function getLastPostedId() {
   try {
-    return fs.readFileSync(LAST_ID_FILE, 'utf-8').trim();
+    const data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+    return data.lastId || null;
   } catch {
     return null;
   }
 }
 
 function saveLastPostedId(id) {
-  fs.writeFileSync(LAST_ID_FILE, id);
+  const data = { lastId: id };
+  fs.mkdirSync(".cache", { recursive: true }); // ensure directory exists
+  fs.writeFileSync(CACHE_FILE, JSON.stringify(data));
 }
 
 async function getLatestPost() {
