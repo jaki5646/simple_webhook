@@ -23,7 +23,7 @@ async function getLatestPost() {
     const res = await axios.get(`https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`, {
       params: {
         access_token: FB_ACCESS_TOKEN,
-        fields: 'message,permalink_url,created_time,id',
+        fields: 'message,permalink_url,created_time,id,attachments{media}',
         limit: 1
       }
     });
@@ -37,6 +37,14 @@ async function getLatestPost() {
 
 async function sendToDiscord(post) {
   const content = `${post.message}\n[*See post*](<${post.permalink_url}>)`;
+  const embeds = [];
+  embeds.push({
+    image: {
+      url: post.attachments?.data[0]?.media?.image?.src || ''
+    },
+    url: post.permalink_url,
+    timestamp: post.created_time
+  })
   try {
     await axios.post(DISCORD_WEBHOOK_URL, { content });
   } catch {
