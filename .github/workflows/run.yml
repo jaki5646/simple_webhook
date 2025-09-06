@@ -12,18 +12,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Restore lastPostId from cache
-        uses: actions/cache@v3
-        with:
-          path: .cache/fb.json
-          key: fb-last-post-id
-          restore-keys: fb-last-post-id
 
       - name: Install dependencies
         run: npm install
@@ -35,9 +30,12 @@ jobs:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-      - name: Save updated post ID to cache
-        uses: actions/cache@v3
-        with:
-          path: .cache/fb.json
-          key: fb-last-post-id-${{ github.run_id }} # Unique key to save new cache
-          restore-keys: fb-last-post-id
+      - name: Commit updated last post ID
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if [ -f .cache/fb.json ]; then
+            git add .cache/fb.json
+            git commit -m "Update last FB post ID" || echo "No changes to commit"
+            git push
+          fi
