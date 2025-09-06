@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-script:
+  post-to-discord:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
         with:
           persist-credentials: true
@@ -30,12 +30,12 @@ jobs:
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-      - name: Commit updated last post ID
+      - name: Commit updated post ID
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           if [ -f .cache/fb.json ]; then
             git add .cache/fb.json
-            git commit -m "Update last FB post ID" || echo "No changes to commit"
+            git commit -m "Update last Facebook post ID" || echo "No changes to commit"
             git push
           fi
