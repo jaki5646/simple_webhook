@@ -9,11 +9,14 @@ jobs:
   post-to-discord:
     runs-on: ubuntu-latest
 
+    permissions:  # ✅ This grants GITHUB_TOKEN write access
+      contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: true
+          persist-credentials: true  # Enables git push with GITHUB_TOKEN
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -32,8 +35,8 @@ jobs:
 
       - name: Commit updated post ID
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -f .cache/fb.json ]; then
             git add .cache/fb.json
             git commit -m "Update last Facebook post ID" || echo "No changes to commit"
