@@ -17,42 +17,54 @@ function getLastPostedId() {
 
 function saveLastPostedId(id) {
   const data = { lastId: id };
-  fs.mkdirSync(".cache", { recursive: true }); // ensure directory exists
+  fs.mkdirSync(".cache", { recursive: true });
   fs.writeFileSync(CACHE_FILE, JSON.stringify(data));
 }
 
+// Fetch latest posts from Facebook Page
 async function getLatestPost() {
   try {
     const res = await axios.get(`https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`, {
       params: {
         access_token: FB_ACCESS_TOKEN,
         fields: 'message,permalink_url,created_time,id,attachments{media}',
-        limit: 1
+        limit: 2
       }
     });
 
     const posts = res.data.data;
-    return posts.length > 0 ? posts[0] : null;
+    if (!posts || posts.length === 0) return null;
+
+    posts.sort((a, b) => new Date(b.created_time) - new Date(a.created_time));
+    return posts[0];
   } catch {
     return null;
   }
 }
 
 async function sendToDiscord(post) {
-  const content = `${post.message}\n[*See post*](<${post.permalink_url}>)`;
+  const content = `${post.message || ''}\n[*See post*](<${post.permalink_url}>)`;
+
+  const imageUrl = post.attachments?.data?.[0]?.media?.image?.src || '';
+
   const embeds = [];
-  embeds.push({
-    image: {
-      url: post.attachments?.data[0]?.media?.image?.src || ''
-    },
-    url: post.permalink_url,
-    timestamp: post.created_time
-  })
-  try {
-    await axios.post(DISCORD_WEBHOOK_URL, { content, embeds });
-  } catch {
-    // Fail silently
+
+  if (imageUrl) {
+    embeds.push({
+      image: {
+        url: imageUrl
+      },
+      url: post.permalink_url,
+      timestamp: post.created_time
+    });
   }
+
+  try {
+    await axios.post(DISCORD_WEBHOOK_URL, {
+      content,
+      embeds
+    });
+  } catch {}
 }
 
 async function checkForNewPost() {
@@ -66,4 +78,5 @@ async function checkForNewPost() {
   saveLastPostedId(latest.id);
 }
 
+// Run the check
 checkForNewPost();
