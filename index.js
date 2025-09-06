@@ -4,31 +4,32 @@ import fs from 'fs';
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const CACHE_FILE = ".cache/fb.json";
+const CACHE_FILE = '.cache/fb.json';
 
-function getLastPostedId() {
+// Load last post ID
+function getLastPostId() {
   try {
-    const data = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
     return data.lastId || null;
   } catch {
     return null;
   }
 }
 
-function saveLastPostedId(id) {
-  const data = { lastId: id };
-  fs.mkdirSync(".cache", { recursive: true });
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(data));
+// Save last post ID
+function saveLastPostId(id) {
+  fs.mkdirSync('.cache', { recursive: true });
+  fs.writeFileSync(CACHE_FILE, JSON.stringify({ lastId: id }), 'utf-8');
 }
 
-// Fetch latest posts from Facebook Page
+// Fetch latest post
 async function getLatestPost() {
   try {
     const res = await axios.get(`https://graph.facebook.com/v18.0/${FB_PAGE_ID}/posts`, {
       params: {
         access_token: FB_ACCESS_TOKEN,
         fields: 'message,permalink_url,created_time,id,attachments{media}',
-        limit: 2
+        limit: 2,
       }
     });
 
@@ -42,41 +43,32 @@ async function getLatestPost() {
   }
 }
 
+// Send to Discord
 async function sendToDiscord(post) {
   const content = `${post.message || ''}\n[*See post*](<${post.permalink_url}>)`;
+  const image = post.attachments?.data?.[0]?.media?.image?.src;
 
-  const imageUrl = post.attachments?.data?.[0]?.media?.image?.src || '';
-
-  const embeds = [];
-
-  if (imageUrl) {
-    embeds.push({
-      image: {
-        url: imageUrl
-      },
-      url: post.permalink_url,
-      timestamp: post.created_time
-    });
-  }
+  const embeds = image
+    ? [{ image: { url: image }, url: post.permalink_url, timestamp: post.created_time }]
+    : [];
 
   try {
-    await axios.post(DISCORD_WEBHOOK_URL, {
-      content,
-      embeds
-    });
-  } catch {}
+    await axios.post(DISCORD_WEBHOOK_URL, { content, embeds });
+  } catch {
+    // Silent fail
+  }
 }
 
-async function checkForNewPost() {
+// Main logic
+async function run() {
   const latest = await getLatestPost();
   if (!latest) return;
 
-  const lastId = getLastPostedId();
+  const lastId = getLastPostId();
   if (latest.id === lastId) return;
 
   await sendToDiscord(latest);
-  saveLastPostedId(latest.id);
+  saveLastPostId(latest.id);
 }
 
-// Run the check
-checkForNewPost();
+run();
