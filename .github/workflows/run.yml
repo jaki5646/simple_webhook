@@ -2,7 +2,7 @@ name: Facebook to Discord
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # every 10 minutes
+    - cron: '*/10 * * * *'  # Every 10 minutes
   workflow_dispatch:
 
 jobs:
@@ -39,4 +39,5 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .cache/fb.json
-          key: fb-last-post-id
+          key: fb-last-post-id-${{ github.run_id }} # Unique key to save new cache
+          restore-keys: fb-last-post-id
